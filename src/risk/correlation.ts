@@ -74,7 +74,8 @@ export function checkCorrelation(decision: TradeDecision): CorrelationResult {
   const openPositions = tracker.getOpenPositions();
 
   for (const pos of openPositions) {
-    const existingTeam = extractTeamFromTokenId(pos.tokenId);
+    // Use stored team if available; fall back to tokenId convention
+    const existingTeam = pos.team ?? extractTeamFromTokenId(pos.tokenId);
     const existingMarketType = extractMarketTypeFromTokenId(pos.tokenId);
 
     if (existingTeam === 'unknown') continue;

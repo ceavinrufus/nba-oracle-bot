@@ -17,6 +17,7 @@ import { execute } from './execution/executor.js';
 
 import { Signal, TradeDecision } from './types.js';
 import { tracker } from './portfolio/index.js';
+import { resolveTeam } from './data/teams.js';
 
 const program = new Command();
 program
@@ -61,6 +62,7 @@ function signalToDecision(signal: Signal, bankrollUsdc: number): TradeDecision |
     return {
       signal,
       tokenId: signal.marketA.tokenId,
+      team: resolveTeam(signal.marketA.outcome) ?? undefined,
       side: 'BUY',
       price: signal.marketA.price,
       sizeUsdc: size,
@@ -74,6 +76,7 @@ function signalToDecision(signal: Signal, bankrollUsdc: number): TradeDecision |
     return {
       signal,
       tokenId: signal.outcome.tokenId,
+      team: resolveTeam(signal.outcome.outcome) ?? undefined,
       side: 'BUY',
       price: signal.impliedProbability,
       sizeUsdc: size,

@@ -35,6 +35,7 @@ export async function execute(decision: TradeDecision): Promise<TradeResult> {
     logger.log(result);
     tracker.addPosition({
       tokenId: decision.tokenId,
+      team: decision.team,
       side: decision.side,
       price: decision.price,
       size: decision.sizeUsdc,
@@ -67,6 +68,7 @@ export async function execute(decision: TradeDecision): Promise<TradeResult> {
     if (result.status === 'filled') {
       tracker.addPosition({
         tokenId: decision.tokenId,
+        team: decision.team,
         side: decision.side,
         price: decision.price,
         size: decision.sizeUsdc,
