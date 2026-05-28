@@ -8,12 +8,38 @@ class Logger {
 
   constructor() {
     mkdirSync(env.logDir, { recursive: true });
-    this.logPath = join(env.logDir, 'trades.jsonl');
+    const date = new Date().toISOString().split('T')[0];
+    this.logPath = join(env.logDir, `trades-${date}.jsonl`);
   }
 
-  log(result: Partial<TradeResult> & Record<string, unknown>): void {
-    const line = JSON.stringify({ ...result, timestamp: Date.now() });
-    appendFileSync(this.logPath, line + '\n');
+  log(result: TradeResult): void {
+    const entry = JSON.stringify({
+      ...result,
+      timestamp: new Date().toISOString(),
+    });
+    appendFileSync(this.logPath, entry + '\n');
+  }
+
+  info(message: string, data?: Record<string, unknown>): void {
+    const entry = JSON.stringify({
+      type: 'INFO',
+      message,
+      data,
+      timestamp: new Date().toISOString(),
+    });
+    appendFileSync(this.logPath, entry + '\n');
+    console.log(`[INFO] ${message}`);
+  }
+
+  error(message: string, err?: unknown): void {
+    const entry = JSON.stringify({
+      type: 'ERROR',
+      message,
+      error: err instanceof Error ? err.message : String(err),
+      timestamp: new Date().toISOString(),
+    });
+    appendFileSync(this.logPath, entry + '\n');
+    console.error(`[ERROR] ${message}`);
   }
 }
 
