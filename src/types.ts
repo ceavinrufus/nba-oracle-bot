@@ -91,6 +91,7 @@ export type TradingMode = 'scan' | 'dry-run' | 'live';
 export interface TradeDecision {
   signal: Signal;
   tokenId: string;
+  team?: string;  // canonical team id, if known
   side: 'BUY' | 'SELL';
   price: number;
   sizeUsdc: number;

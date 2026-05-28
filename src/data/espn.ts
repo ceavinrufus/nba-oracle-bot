@@ -1,6 +1,7 @@
 import axios from 'axios';
 import { env } from '../env.js';
 import { TeamStats, InjuryReport, SeriesState } from '../types.js';
+import { espnLimiter } from './limiters.js';
 
 const espn = axios.create({ baseURL: env.espnNbaUrl });
 
@@ -8,7 +9,9 @@ const espn = axios.create({ baseURL: env.espnNbaUrl });
 
 export async function fetchInjuryReports(): Promise<InjuryReport[]> {
   try {
+    await espnLimiter.throttle();
     const res = await espn.get('/injuries');
+    espnLimiter.recordSuccess();
     const injuries: InjuryReport[] = [];
 
     for (const team of res.data?.injuries ?? []) {
@@ -27,6 +30,7 @@ export async function fetchInjuryReports(): Promise<InjuryReport[]> {
 
     return injuries;
   } catch {
+    espnLimiter.recordFailure();
     return [];
   }
 }
@@ -44,7 +48,9 @@ function normalizeStatus(s: string): InjuryReport['status'] {
 
 export async function fetchTeamStats(teamId: string): Promise<TeamStats | null> {
   try {
+    await espnLimiter.throttle();
     const res = await espn.get(`/teams/${teamId}`);
+    espnLimiter.recordSuccess();
     const team = res.data?.team;
     if (!team) return null;
 
@@ -62,6 +68,7 @@ export async function fetchTeamStats(teamId: string): Promise<TeamStats | null> 
       awayRecord: { wins: getstat('roadWins'), losses: getstat('roadLosses') },
     };
   } catch {
+    espnLimiter.recordFailure();
     return null;
   }
 }
@@ -70,9 +77,11 @@ export async function fetchTeamStats(teamId: string): Promise<TeamStats | null> 
 
 export async function fetchPlayoffSeries(): Promise<SeriesState[]> {
   try {
+    await espnLimiter.throttle();
     const res = await espn.get('/scoreboard', {
       params: { seasontype: 3 }, // postseason
     });
+    espnLimiter.recordSuccess();
 
     const series: SeriesState[] = [];
 
@@ -130,6 +139,7 @@ export async function fetchPlayoffSeries(): Promise<SeriesState[]> {
 
     return series;
   } catch {
+    espnLimiter.recordFailure();
     return [];
   }
 }

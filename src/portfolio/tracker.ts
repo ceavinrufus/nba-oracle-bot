@@ -5,6 +5,7 @@ import { dirname, resolve } from 'node:path';
 
 export interface Position {
   tokenId: string;
+  team?: string;  // canonical team id, if known
   side: 'BUY' | 'SELL';
   price: number;
   size: number;        // USDC
