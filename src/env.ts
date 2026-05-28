@@ -40,6 +40,9 @@ export const env = {
   tradingMode: optional('TRADING_MODE', 'dry-run') as TradingMode,
 
   // Risk parameters
+  maxDailyLossUsdc: optionalNumber('MAX_DAILY_LOSS_USDC', 50),
+  maxPortfolioExposureUsdc: optionalNumber('MAX_PORTFOLIO_EXPOSURE_USDC', 100),
+  maxSingleTeamExposureUsdc: optionalNumber('MAX_SINGLE_TEAM_EXPOSURE_USDC', 30),
   kellyFraction: optionalNumber('KELLY_FRACTION', 0.1),
   maxBetUsdc: optionalNumber('MAX_BET_USDC', 10),
   minEvThreshold: optionalNumber('MIN_EV_THRESHOLD', 0.08),

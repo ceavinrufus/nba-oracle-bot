@@ -7,7 +7,7 @@ import { isKilled } from './execution/kill-switch.js';
 
 import { scanInjuries } from './agents/injury-scout.js';
 import { scanCrossMarketArb } from './agents/crossmarket-arb.js';
-import { scanSeriesEV } from './agents/series-probability.js';
+import { scanSeriesEVv2 } from './agents/series-probability-v2.js';
 
 import { fetchMarketsWithPrices } from './data/polymarket.js';
 import { fetchUsdcBalance } from './data/chain.js';
@@ -15,6 +15,7 @@ import { kellySize } from './execution/kelly.js';
 import { execute } from './execution/executor.js';
 
 import { Signal, TradeDecision } from './types.js';
+import { tracker } from './portfolio/index.js';
 
 const program = new Command();
 program
@@ -53,13 +54,14 @@ function signalToDecision(signal: Signal, bankrollUsdc: number): TradeDecision |
   }
 
   if (signal.type === 'ARB') {
-    const size = kellySize(signal.actualProb, signal.impliedProb, bankrollUsdc);
+    // marketA.price is the current market price; actualProb is the model's fair value
+    const size = kellySize(signal.actualProb, signal.marketA.price, bankrollUsdc);
     if (size < 0.5) return null;
     return {
       signal,
       tokenId: signal.marketA.tokenId,
       side: 'BUY',
-      price: signal.impliedProb,
+      price: signal.marketA.price,
       sizeUsdc: size,
       reasoning: signal.description,
     };
@@ -113,7 +115,7 @@ async function runCycle(bankrollUsdc: number): Promise<void> {
       logger.error('Arb scanner failed', e);
       return [];
     }),
-    scanSeriesEV(markets).catch(e => {
+    scanSeriesEVv2(markets, injurySignals.map(s => s.injury)).catch(e => {
       logger.error('EV scanner failed', e);
       return [];
     }),
@@ -136,7 +138,8 @@ async function runCycle(bankrollUsdc: number): Promise<void> {
   const decisions = allSignals
     .map(s => signalToDecision(s, bankrollUsdc))
     .filter((d): d is TradeDecision => d !== null)
-    .filter(d => !wasRecentlyTraded(d.tokenId));
+    .filter(d => !wasRecentlyTraded(d.tokenId))
+    .filter(d => !tracker.hasPosition(d.tokenId));
 
   if (decisions.length === 0) {
     dashboard.setPhase('idle', 'Signals found but no trades pass filters.');

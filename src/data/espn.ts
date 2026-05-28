@@ -100,8 +100,8 @@ export async function fetchPlayoffSeries(): Promise<SeriesState[]> {
       const homeStats = teamStatsResults[i * 2];
       const awayStats = teamStatsResults[i * 2 + 1];
 
-      const homeSeries = home.record?.items?.find((r: { type: string }) => r.type === 'vsconf');
-      const awaySeries = away.record?.items?.find((r: { type: string }) => r.type === 'vsconf');
+      const homeSeries = home.record?.items?.find((r: { type: string }) => r.type === 'playoff') ?? home.record?.items?.find((r: { type: string }) => r.type === 'vsconf');
+      const awaySeries = away.record?.items?.find((r: { type: string }) => r.type === 'playoff') ?? away.record?.items?.find((r: { type: string }) => r.type === 'vsconf');
 
       series.push({
         seriesId: event.id,

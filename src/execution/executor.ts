@@ -2,13 +2,14 @@ import axios from 'axios';
 import { env, getMode, requireLiveCredentials } from '../env.js';
 import { TradeDecision, TradeResult } from '../types.js';
 import { signOrder } from './signer.js';
-import { checkKillSwitch } from './kill-switch.js';
+import { checkRisk } from '../risk/index.js';
 import { logger } from '../utils/logger.js';
+import { tracker } from '../portfolio/index.js';
 
 const clob = axios.create({ baseURL: env.polymarketClobUrl });
 
 export async function execute(decision: TradeDecision): Promise<TradeResult> {
-  checkKillSwitch();
+  checkRisk(decision);
 
   const base: Omit<TradeResult, 'status' | 'orderId' | 'fillPrice' | 'error'> = {
     decision,
@@ -32,6 +33,13 @@ export async function execute(decision: TradeDecision): Promise<TradeResult> {
       orderId: `dry-${Date.now()}`,
     };
     logger.log(result);
+    tracker.addPosition({
+      tokenId: decision.tokenId,
+      side: decision.side,
+      price: decision.price,
+      size: decision.sizeUsdc,
+      enteredAt: Date.now(),
+    });
     console.log(`[DRY-RUN] ${decision.side} ${decision.sizeUsdc.toFixed(2)} USDC @ ${decision.price.toFixed(3)} — ${decision.reasoning}`);
     return result;
   }
@@ -56,6 +64,15 @@ export async function execute(decision: TradeDecision): Promise<TradeResult> {
       fillPrice: decision.price,
     };
     logger.log(result);
+    if (result.status === 'filled') {
+      tracker.addPosition({
+        tokenId: decision.tokenId,
+        side: decision.side,
+        price: decision.price,
+        size: decision.sizeUsdc,
+        enteredAt: Date.now(),
+      });
+    }
     console.log(`[LIVE] Order ${res.data.orderID} — ${res.data.status}`);
     return result;
   } catch (err) {

@@ -17,6 +17,7 @@ export function kellySize(
   bankrollUsdc: number,
 ): number {
   if (marketPrice <= 0 || marketPrice >= 1) return 0;
+  if (modelProb <= 0 || modelProb >= 1) return 0;
 
   const b = (1 / marketPrice) - 1; // net odds
   const p = modelProb;

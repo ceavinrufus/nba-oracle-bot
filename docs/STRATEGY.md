@@ -6,17 +6,17 @@ The NBA Oracle Bot implements a multi-signal approach to NBA playoff prediction 
 
 ## Signal Engine 1: Injury Scout
 
-**Thesis:** NBA injury reports drop 30–60 minutes before tip-off. Most bots poll on fixed intervals and use stale data. A star player ruled OUT causes predictable market mispricing that resolves quickly once widely known.
+**Thesis:** NBA injury reports drop 30-60 minutes before tip-off. Most bots poll on fixed intervals and use stale data. A star player ruled OUT causes predictable market mispricing that resolves quickly once widely known.
 
-**Implementation:** Monitor ESPN injury endpoints at 60-second intervals. Track status changes (ACTIVE → OUT = high urgency signal). Filter to star players only (by name keyword). Estimate price impact by severity.
+**Implementation:** Monitor ESPN injury endpoints at 60-second intervals. Track status changes (ACTIVE to OUT = high urgency signal). Filter to star players only (by name keyword). Estimate price impact by severity.
 
 **Edge type:** Speed-based opportunity (official hackathon theme 3)
 
 ## Signal Engine 2: Cross-Market Arb
 
 **Thesis:** Polymarket runs many correlated markets simultaneously. Two types of inconsistency arise:
-1. **Complementary mispricing:** YES price + NO price ≠ 1.0 (should by definition)
-2. **Series/game inconsistency:** Series win probability mathematically constrains game win probability in elimination scenarios
+1. Complementary mispricing: YES price + NO price != 1.0 (should by definition)
+2. Series/game inconsistency: Series win probability mathematically constrains game win probability in elimination scenarios
 
 **Implementation:** Scan all active NBA markets. Check complement sums. Cross-reference series markets vs game markets for same team.
 
@@ -49,9 +49,9 @@ All trades pass through:
 
 ## Canon Integration
 
-The three signal engines run conceptually in parallel within Canon's multi-agent framework. Each maps to a Canon agent role defined in `dega-core.yaml`:
-- `market_analyst` → fetches and filters markets
-- `injury_scout` → monitors injury reports
-- `series_engine` → runs EV model
-- `arb_detector` → cross-market scanning
-- `executor` → Kelly sizing + order submission
+The three signal engines run conceptually in parallel within Canon's multi-agent framework. Each maps to a Canon agent role defined in dega-core.yaml:
+- market_analyst: fetches and filters markets
+- injury_scout: monitors injury reports
+- series_engine: runs EV model
+- arb_detector: cross-market scanning
+- executor: Kelly sizing + order submission
