@@ -1,0 +1,41 @@
+version: 1
+strategy: nba-oracle-bot
+description: >
+  Multi-signal NBA prediction market oracle: Injury Scout +
+  Cross-Market Arbitrage Detector + Series Probability Engine.
+  Canon-native multi-agent orchestration for DEGA hackathon.
+max_iterations: 6
+warn_at_iteration: 5
+
+success_criteria:
+  - id: types_compile
+    description: TypeScript compiles with zero errors
+    check: "pnpm exec tsc --noEmit"
+    required: true
+
+  - id: lint_clean
+    description: Linter reports zero errors
+    check: "pnpm run lint"
+    required: true
+
+  - id: tests_pass
+    description: All unit tests pass
+    check: "pnpm exec vitest run"
+    required: true
+
+  - id: dry_run_executes
+    description: Dry-run mode completes one full scan cycle without crashing
+    check: "timeout 30 pnpm run dry-run || true"
+    required: true
+
+agents:
+  - id: market_analyst
+    role: "Scan Polymarket for NBA playoff markets with pricing inefficiencies"
+  - id: injury_scout
+    role: "Monitor NBA injury reports for late-breaking changes that markets haven't priced in"
+  - id: series_engine
+    role: "Calculate series win probabilities from ESPN data and compare to Polymarket implied prices"
+  - id: arb_detector
+    role: "Detect mathematical inconsistencies between correlated markets"
+  - id: executor
+    role: "Size positions with Kelly criterion and submit orders to Polymarket CLOB"

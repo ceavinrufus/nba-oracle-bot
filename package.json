@@ -1,0 +1,37 @@
+{
+  "name": "nba-oracle-bot",
+  "version": "0.1.0",
+  "description": "Multi-signal NBA prediction market trading bot — Canon-native, DEGA hackathon submission",
+  "main": "dist/main.js",
+  "scripts": {
+    "build": "tsc",
+    "typecheck": "tsc --noEmit",
+    "lint": "oxlint src --deny-warnings",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "scan": "tsx src/main.ts --mode=scan",
+    "dry-run": "tsx src/main.ts --mode=dry-run",
+    "live": "tsx src/main.ts --mode=live",
+    "start": "tsx src/main.ts"
+  },
+  "dependencies": {
+    "ethers": "^6.13.0",
+    "axios": "^1.7.0",
+    "dotenv": "^16.4.0",
+    "commander": "^12.1.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.5.0",
+    "tsx": "^4.16.0",
+    "vitest": "^1.6.0",
+    "@types/node": "^22.0.0",
+    "oxlint": "^0.9.0"
+  },
+  "engines": {
+    "node": ">=22.0.0",
+    "pnpm": ">=10.0.0"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": ["esbuild"]
+  }
+}
