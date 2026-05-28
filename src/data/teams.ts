@@ -35,26 +35,27 @@ const NBA_TEAMS: TeamEntry[] = [
 
 export function resolveTeam(text: string): string | null {
   if (!text) return null;
-  const lower = text.toLowerCase().replace(/[^a-z0-9 ]/g, '').trim();
+  // Normalize: lowercase, strip non-alphanumeric except spaces, trim
+  const lower = text.toLowerCase().replace(/[^a-z0-9 -]/g, '').trim();
+  // Also a version with hyphens replaced by spaces for matching
+  const lowerNoHyphen = lower.replace(/-/g, ' ').replace(/\s+/g, ' ').trim();
 
-  // Pass 1: exact match on fullName, id (with hyphens stripped), or any alias
+  // Pass 1: exact match on fullName, id, or any alias
   for (const team of NBA_TEAMS) {
     const fullLower = team.fullName.toLowerCase();
     const idNorm = team.id.replace(/-/g, ' ');
-    if (lower === fullLower || lower === idNorm || lower === team.id) return team.id;
-    if (team.aliases.some(a => lower === a)) return team.id;
+    if (lower === team.id || lowerNoHyphen === fullLower || lowerNoHyphen === idNorm) return team.id;
+    if (team.aliases.some(a => lowerNoHyphen === a)) return team.id;
   }
 
-  // Pass 2: word-boundary substring — only match aliases that appear as whole words
+  // Pass 2: word-boundary substring matching
   for (const team of NBA_TEAMS) {
     const fullLower = team.fullName.toLowerCase();
-    // Check if full team name appears as a substring
-    if (lower.includes(fullLower)) return team.id;
-    // Check aliases with word boundaries (regex)
+    if (lowerNoHyphen.includes(fullLower)) return team.id;
     for (const alias of team.aliases) {
       const escaped = alias.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
       const re = new RegExp(`(?:^|\\s)${escaped}(?:\\s|$)`);
-      if (re.test(lower)) return team.id;
+      if (re.test(lowerNoHyphen)) return team.id;
     }
   }
 

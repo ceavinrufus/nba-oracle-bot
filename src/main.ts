@@ -193,9 +193,10 @@ async function main(): Promise<void> {
   const liveprices = new Map<string, number>();
   const wsClient = new PolymarketWebSocket(
     (url: string) => {
-      // eslint-disable-next-line @typescript-eslint/no-require-imports, @typescript-eslint/no-explicit-any
-      const WS = require('ws') as { new(url: string): any };
-      return new WS(url) as import('./data/polymarket-ws.js').WebSocketLike;
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const WS = require('ws') as typeof import('ws');
+      const sock = new WS(url);
+      return sock as unknown as import('./data/polymarket-ws.js').WebSocketLike;
     },
   );
 
