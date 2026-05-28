@@ -39,8 +39,8 @@ export function detectComplementaryArb(markets: Market[]): ArbSignal[] {
       signals.push({
         type: 'ARB',
         description: `Complementary mispricing: YES(${yes.price.toFixed(3)}) + NO(${no.price.toFixed(3)}) = ${sum.toFixed(3)} (gap: ${(gap * 100).toFixed(1)}%)`,
-        marketA: { marketId: market.marketId, outcome: mispriced.outcome, price: mispriced.price },
-        marketB: { marketId: market.marketId, outcome: mispriced.outcome === 'Yes' ? 'No' : 'Yes', price: 1 - mispriced.price },
+        marketA: { marketId: market.marketId, tokenId: mispriced.tokenId, outcome: mispriced.outcome, price: mispriced.price },
+        marketB: { marketId: market.marketId, tokenId: (mispriced === yes ? no : yes).tokenId, outcome: mispriced.outcome === 'Yes' ? 'No' : 'Yes', price: 1 - mispriced.price },
         impliedProb: mispriced.price,
         actualProb: fair,
         gapSize: gap,
@@ -92,11 +92,13 @@ export function detectSeriesGameInconsistency(markets: Market[]): ArbSignal[] {
             description: `Series/game inconsistency for ${outcome.outcome}: series=${seriesWinProb.toFixed(3)} game=${gameWinProb.toFixed(3)} gap=${(gap * 100).toFixed(1)}%`,
             marketA: {
               marketId: seriesWinProb > gameWinProb ? gameMarket.marketId : seriesMarket.marketId,
+              tokenId: mispriced.tokenId,
               outcome: mispriced.outcome,
               price: mispriced.price,
             },
             marketB: {
               marketId: seriesWinProb > gameWinProb ? seriesMarket.marketId : gameMarket.marketId,
+              tokenId: anchor.tokenId,
               outcome: anchor.outcome,
               price: anchor.price,
             },

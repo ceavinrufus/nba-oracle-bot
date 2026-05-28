@@ -1,6 +1,6 @@
 import axios from 'axios';
 import { env } from '../env.js';
-import { Market, MarketOutcome } from '../types.js';
+import { Market } from '../types.js';
 
 const clob = axios.create({ baseURL: env.polymarketClobUrl });
 const gamma = axios.create({ baseURL: env.polymarketGammaUrl });
@@ -12,11 +12,14 @@ interface GammaMarket {
   conditionId: string;
   question: string;
   tokens: Array<{ token_id: string; outcome: string }>;
-  liquidityClob: number;
-  volume24hrClob: number;
+  liquidityClob?: number;
+  liquidityNum?: number;
+  volume24hrClob?: number;
+  volumeNum?: number;
   endDate: string;
   active: boolean;
   closed: boolean;
+  outcomePrices?: string; // JSON array of price strings e.g. '["0.65","0.35"]'
 }
 
 export async function fetchNbaMarkets(): Promise<Market[]> {
@@ -31,20 +34,26 @@ export async function fetchNbaMarkets(): Promise<Market[]> {
 
   return res.data
     .filter(m => !m.closed && m.active)
-    .map(m => ({
-      marketId: m.id,
-      conditionId: m.conditionId,
-      question: m.question,
-      outcomes: m.tokens.map(t => ({
-        tokenId: t.token_id,
-        outcome: t.outcome,
-        price: 0, // will be filled by fetchPrices
-      })),
-      liquidity: m.liquidityClob ?? 0,
-      volume24h: m.volume24hrClob ?? 0,
-      closeTime: new Date(m.endDate).getTime() / 1000,
-      active: m.active,
-    }));
+    .map(m => {
+      const prices: number[] = m.outcomePrices
+        ? (JSON.parse(m.outcomePrices) as string[]).map(Number)
+        : [];
+
+      return {
+        marketId: m.id,
+        conditionId: m.conditionId,
+        question: m.question,
+        outcomes: m.tokens.map((t, i) => ({
+          tokenId: t.token_id,
+          outcome: t.outcome,
+          price: prices[i] ?? 0,
+        })),
+        liquidity: m.liquidityClob ?? m.liquidityNum ?? 0,
+        volume24h: m.volume24hrClob ?? m.volumeNum ?? 0,
+        closeTime: new Date(m.endDate).getTime() / 1000,
+        active: m.active,
+      };
+    });
 }
 
 // ─── CLOB API: Live Prices ────────────────────────────────────────────────────
@@ -57,15 +66,21 @@ interface ClobPrice {
 export async function fetchPrices(tokenIds: string[]): Promise<Map<string, number>> {
   if (tokenIds.length === 0) return new Map();
 
-  const res = await clob.get<ClobPrice[]>('/prices', {
-    params: { token_ids: tokenIds.join(',') },
-  });
+  try {
+    const res = await clob.get<ClobPrice[]>('/prices', {
+      params: { token_ids: tokenIds.join(',') },
+      paramsSerializer: { indexes: null },
+    });
 
-  const map = new Map<string, number>();
-  for (const p of res.data) {
-    map.set(p.token_id, parseFloat(p.price));
+    const map = new Map<string, number>();
+    for (const p of res.data) {
+      map.set(p.token_id, parseFloat(p.price));
+    }
+    return map;
+  } catch {
+    // Fallback: prices already populated from Gamma outcomePrices
+    return new Map();
   }
-  return map;
 }
 
 export async function fetchMarketsWithPrices(): Promise<Market[]> {

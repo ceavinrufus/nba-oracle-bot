@@ -7,7 +7,9 @@ const seenInjuries = new Map<string, InjuryReport['status']>();
 
 const STAR_PLAYER_KEYWORDS = [
   'lebron', 'curry', 'durant', 'giannis', 'jokic', 'embiid',
-  'luka', 'tatum', 'mitchell', 'sga', 'gilgeous', 'brunson',
+  'luka', 'tatum', 'mitchell', 'sga', 'shai', 'gilgeous', 'brunson',
+  'brown', 'edwards', 'booker', 'paul', 'lillard', 'kawhi',
+  'butler', 'bam', 'adebayo', 'harden', 'westbrook', 'cp3',
 ];
 
 function isStarPlayer(playerName: string): boolean {
@@ -49,7 +51,7 @@ export async function scanInjuries(): Promise<InjurySignal[]> {
 
     // Find affected markets (markets mentioning the team)
     const affectedMarkets = markets
-      .filter(m => m.question.toLowerCase().includes(injury.teamId.toLowerCase()))
+      .filter(m => m.question.toLowerCase().includes(injury.teamName.toLowerCase()))
       .map(m => m.marketId);
 
     signals.push({

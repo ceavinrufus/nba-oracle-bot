@@ -3,7 +3,7 @@ import { TradingMode } from './types.js';
 
 config();
 
-function required(key: string): string {
+export function required(key: string): string {
   const val = process.env[key];
   if (!val) throw new Error(`Missing required env var: ${key}`);
   return val;
@@ -19,6 +19,16 @@ function optionalNumber(key: string, fallback: number): number {
   const n = Number(val);
   if (isNaN(n)) throw new Error(`Env var ${key} must be a number, got: ${val}`);
   return n;
+}
+
+/** Read trading mode lazily so CLI --mode flag works even after module init */
+export function getMode(): TradingMode {
+  return (process.env['TRADING_MODE'] as TradingMode) || 'dry-run';
+}
+
+/** Read kill switch lazily */
+export function getKillSwitch(): boolean {
+  return process.env['KILL_SWITCH'] === 'true';
 }
 
 export const env = {
@@ -52,6 +62,17 @@ export const env = {
   // Kill switch
   killSwitch: process.env['KILL_SWITCH'] === 'true',
 } as const;
+
+export function validateEnv(): void {
+  const mode = getMode();
+  if (!['scan', 'dry-run', 'live'].includes(mode)) {
+    throw new Error(`Invalid TRADING_MODE: "${mode}". Must be scan, dry-run, or live.`);
+  }
+  if (mode === 'live') {
+    if (!process.env['WALLET_PRIVATE_KEY']) throw new Error('WALLET_PRIVATE_KEY required for live trading');
+    if (!process.env['WALLET_ADDRESS']) throw new Error('WALLET_ADDRESS required for live trading');
+  }
+}
 
 export function requireLiveCredentials(): void {
   if (!env.walletPrivateKey) throw new Error('WALLET_PRIVATE_KEY required for live trading');

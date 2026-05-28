@@ -17,6 +17,7 @@ export async function fetchInjuryReports(): Promise<InjuryReport[]> {
           playerId: player.athlete?.id ?? '',
           playerName: player.athlete?.displayName ?? '',
           teamId: team.team?.id ?? '',
+          teamName: team.team?.displayName ?? '',
           status: normalizeStatus(player.status ?? ''),
           description: player.details?.fantasyStatus?.description ?? player.type ?? '',
           reportedAt: Date.now(),
@@ -75,7 +76,10 @@ export async function fetchPlayoffSeries(): Promise<SeriesState[]> {
 
     const series: SeriesState[] = [];
 
-    for (const event of res.data?.events ?? []) {
+    const events = res.data?.events ?? [];
+    const entries: Array<{ event: typeof events[0]; home: { team: { id: string; displayName: string }; record?: { items?: Array<{ type: string; summary?: string }> }; linescores?: unknown[] }; away: { team: { id: string; displayName: string }; record?: { items?: Array<{ type: string; summary?: string }> }; linescores?: unknown[] } }> = [];
+
+    for (const event of events) {
       const comp = event.competitions?.[0];
       if (!comp) continue;
 
@@ -83,12 +87,25 @@ export async function fetchPlayoffSeries(): Promise<SeriesState[]> {
       const away = comp.competitors?.find((c: { homeAway: string }) => c.homeAway === 'away');
       if (!home || !away) continue;
 
+      entries.push({ event, home, away });
+    }
+
+    // Fetch all team stats in parallel
+    const teamStatsResults = await Promise.all(
+      entries.flatMap(e => [fetchTeamStats(e.home.team.id), fetchTeamStats(e.away.team.id)])
+    );
+
+    for (let i = 0; i < entries.length; i++) {
+      const { event, home, away } = entries[i]!;
+      const homeStats = teamStatsResults[i * 2];
+      const awayStats = teamStatsResults[i * 2 + 1];
+
       const homeSeries = home.record?.items?.find((r: { type: string }) => r.type === 'vsconf');
       const awaySeries = away.record?.items?.find((r: { type: string }) => r.type === 'vsconf');
 
       series.push({
         seriesId: event.id,
-        homeTeam: await fetchTeamStats(home.team.id) ?? {
+        homeTeam: homeStats ?? {
           teamId: home.team.id,
           teamName: home.team.displayName,
           wins: 0, losses: 0,
@@ -96,7 +113,7 @@ export async function fetchPlayoffSeries(): Promise<SeriesState[]> {
           homeRecord: { wins: 0, losses: 0 },
           awayRecord: { wins: 0, losses: 0 },
         },
-        awayTeam: await fetchTeamStats(away.team.id) ?? {
+        awayTeam: awayStats ?? {
           teamId: away.team.id,
           teamName: away.team.displayName,
           wins: 0, losses: 0,

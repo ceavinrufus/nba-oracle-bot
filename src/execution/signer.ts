@@ -27,7 +27,7 @@ const ORDER_TYPES = {
     { name: 'side', type: 'uint8' },
     { name: 'signatureType', type: 'uint8' },
   ],
-} as const;
+};
 
 export interface SignedOrder {
   salt: string;

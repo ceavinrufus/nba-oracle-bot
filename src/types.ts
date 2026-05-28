@@ -33,6 +33,7 @@ export interface InjuryReport {
   playerId: string;
   playerName: string;
   teamId: string;
+  teamName: string;
   status: 'OUT' | 'DOUBTFUL' | 'QUESTIONABLE' | 'PROBABLE' | 'ACTIVE';
   description: string;
   reportedAt: number;     // Unix timestamp ms
@@ -62,8 +63,8 @@ export interface InjurySignal {
 export interface ArbSignal {
   type: 'ARB';
   description: string;
-  marketA: { marketId: string; outcome: string; price: number };
-  marketB: { marketId: string; outcome: string; price: number };
+  marketA: { marketId: string; tokenId: string; outcome: string; price: number };
+  marketB: { marketId: string; tokenId: string; outcome: string; price: number };
   impliedProb: number;
   actualProb: number;
   gapSize: number;        // absolute price gap

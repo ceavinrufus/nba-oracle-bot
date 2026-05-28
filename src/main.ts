@@ -1,7 +1,8 @@
 import { Command } from 'commander';
-import { env } from './env.js';
+import { env, getMode, validateEnv } from './env.js';
 import { dashboard } from './monitor/dashboard.js';
 import { logger } from './utils/logger.js';
+import { withRetry } from './utils/retry.js';
 import { isKilled } from './execution/kill-switch.js';
 
 import { scanInjuries } from './agents/injury-scout.js';
@@ -9,6 +10,7 @@ import { scanCrossMarketArb } from './agents/crossmarket-arb.js';
 import { scanSeriesEV } from './agents/series-probability.js';
 
 import { fetchMarketsWithPrices } from './data/polymarket.js';
+import { fetchUsdcBalance } from './data/chain.js';
 import { kellySize } from './execution/kelly.js';
 import { execute } from './execution/executor.js';
 
@@ -21,6 +23,25 @@ program
 
 const opts = program.opts<{ mode: string }>();
 if (opts.mode) process.env['TRADING_MODE'] = opts.mode;
+
+// ─── Position Deduplication ───────────────────────────────────────────────────
+
+const RECENT_TRADE_TTL_MS = 5 * 60 * 1000; // 5 minutes
+const recentTrades = new Map<string, number>(); // tokenId → timestamp
+
+function markTraded(tokenId: string): void {
+  recentTrades.set(tokenId, Date.now());
+}
+
+function wasRecentlyTraded(tokenId: string): boolean {
+  const ts = recentTrades.get(tokenId);
+  if (!ts) return false;
+  if (Date.now() - ts > RECENT_TRADE_TTL_MS) {
+    recentTrades.delete(tokenId);
+    return false;
+  }
+  return true;
+}
 
 // ─── Signal → Decision ────────────────────────────────────────────────────────
 
@@ -36,7 +57,7 @@ function signalToDecision(signal: Signal, bankrollUsdc: number): TradeDecision |
     if (size < 0.5) return null;
     return {
       signal,
-      tokenId: signal.marketA.marketId, // tokenId === marketId for arb
+      tokenId: signal.marketA.tokenId,
       side: 'BUY',
       price: signal.impliedProb,
       sizeUsdc: size,
@@ -68,11 +89,11 @@ async function runCycle(bankrollUsdc: number): Promise<void> {
 
   // Run all three signal engines in parallel
   const [markets, injurySignals] = await Promise.all([
-    fetchMarketsWithPrices().catch(e => {
+    withRetry(() => fetchMarketsWithPrices()).catch(e => {
       logger.error('Failed to fetch markets', e);
       return [];
     }),
-    scanInjuries().catch(e => {
+    withRetry(() => scanInjuries()).catch(e => {
       logger.error('Injury scout failed', e);
       return [];
     }),
@@ -111,10 +132,11 @@ async function runCycle(bankrollUsdc: number): Promise<void> {
   dashboard.recordOpportunity();
   dashboard.setPhase('analyzing', `Found ${allSignals.length} signal(s). Evaluating...`);
 
-  // Convert to trade decisions
+  // Convert to trade decisions (filter out recently traded positions)
   const decisions = allSignals
     .map(s => signalToDecision(s, bankrollUsdc))
-    .filter((d): d is TradeDecision => d !== null);
+    .filter((d): d is TradeDecision => d !== null)
+    .filter(d => !wasRecentlyTraded(d.tokenId));
 
   if (decisions.length === 0) {
     dashboard.setPhase('idle', 'Signals found but no trades pass filters.');
@@ -127,6 +149,7 @@ async function runCycle(bankrollUsdc: number): Promise<void> {
     if (isKilled()) break;
     const result = await execute(decision);
     if (result.status === 'filled' || result.status === 'simulated') {
+      markTraded(decision.tokenId);
       dashboard.recordTrade(0); // PnL unknown until settlement
       dashboard.addLog(`✅ ${decision.side} ${decision.sizeUsdc.toFixed(2)} USDC — ${decision.reasoning}`);
     }
@@ -138,7 +161,8 @@ async function runCycle(bankrollUsdc: number): Promise<void> {
 // ─── Entry Point ──────────────────────────────────────────────────────────────
 
 async function main(): Promise<void> {
-  const mode = env.tradingMode;
+  validateEnv();
+  const mode = getMode();
   console.log(`\n🏀 NBA Oracle Bot — ${mode.toUpperCase()} MODE`);
   console.log(`Strategy: Injury Scout + Cross-Market Arb + Series EV`);
   console.log(`Min EV: ${(env.minEvThreshold * 100).toFixed(0)}% | Kelly: ${(env.kellyFraction * 100).toFixed(0)}% | Max bet: $${env.maxBetUsdc}\n`);
@@ -146,7 +170,9 @@ async function main(): Promise<void> {
   dashboard.setPhase('scanning', `${mode.toUpperCase()} mode started`);
   logger.info(`NBA Oracle Bot started`, { mode, version: '0.1.0' });
 
-  const BANKROLL = 100; // Conservative default; update with actual USDC balance
+  const BANKROLL = mode === 'live' && env.walletAddress
+    ? await fetchUsdcBalance(env.walletAddress).catch(() => 100)
+    : 100;
 
   // Run once (scan/dry-run) or loop (live)
   if (mode === 'scan' || mode === 'dry-run') {

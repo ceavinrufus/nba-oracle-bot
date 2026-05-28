@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { env, requireLiveCredentials } from '../env.js';
+import { env, getMode, requireLiveCredentials } from '../env.js';
 import { TradeDecision, TradeResult } from '../types.js';
 import { signOrder } from './signer.js';
 import { checkKillSwitch } from './kill-switch.js';
@@ -15,14 +15,16 @@ export async function execute(decision: TradeDecision): Promise<TradeResult> {
     executedAt: Date.now(),
   };
 
+  const mode = getMode();
+
   // SCAN MODE: just log the opportunity
-  if (env.tradingMode === 'scan') {
+  if (mode === 'scan') {
     logger.log({ ...base, status: 'skipped', executedAt: Date.now() });
     return { ...base, status: 'skipped' };
   }
 
   // DRY-RUN MODE: simulate
-  if (env.tradingMode === 'dry-run') {
+  if (mode === 'dry-run') {
     const result: TradeResult = {
       ...base,
       status: 'simulated',

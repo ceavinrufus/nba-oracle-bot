@@ -1,9 +1,9 @@
-import { env } from '../env.js';
+import { getKillSwitch } from '../env.js';
 
 let _killed = false;
 
 export function isKilled(): boolean {
-  return _killed || env.killSwitch;
+  return _killed || getKillSwitch();
 }
 
 export function kill(reason: string): void {
