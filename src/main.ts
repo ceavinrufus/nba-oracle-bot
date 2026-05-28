@@ -11,6 +11,7 @@ import { scanSeriesEVv2 } from './agents/series-probability-v2.js';
 
 import { fetchMarketsWithPrices } from './data/polymarket.js';
 import { fetchUsdcBalance } from './data/chain.js';
+import { PolymarketWebSocket, WebSocketLike } from './data/polymarket-ws.js';
 import { kellySize } from './execution/kelly.js';
 import { execute } from './execution/executor.js';
 
@@ -85,7 +86,7 @@ function signalToDecision(signal: Signal, bankrollUsdc: number): TradeDecision |
 
 // ─── Main Loop ────────────────────────────────────────────────────────────────
 
-async function runCycle(bankrollUsdc: number): Promise<void> {
+async function runCycle(bankrollUsdc: number, liveprices: Map<string, number>): Promise<void> {
   dashboard.setPhase('scanning', 'Fetching markets and signals...');
   dashboard.recordScan();
 
@@ -102,6 +103,14 @@ async function runCycle(bankrollUsdc: number): Promise<void> {
   ]);
 
   dashboard.setSignalStatus('injury_scout', injurySignals.length > 0 ? 'signal_found' : 'idle');
+
+  // Overlay WebSocket live prices onto freshly fetched markets
+  for (const market of markets) {
+    for (const outcome of (market as { outcomes: Array<{ tokenId: string; price: number }> }).outcomes) {
+      const lp = liveprices.get(outcome.tokenId);
+      if (lp !== undefined) outcome.price = lp;
+    }
+  }
 
   if (injurySignals.length > 0) {
     for (const s of injurySignals) {
@@ -177,21 +186,47 @@ async function main(): Promise<void> {
     ? await fetchUsdcBalance(env.walletAddress).catch(() => 100)
     : 100;
 
+  // ─── WebSocket Price Feeds ─────────────────────────────────────────────────
+  const liveprices = new Map<string, number>();
+  const wsClient = new PolymarketWebSocket(
+    (url: string) => {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const WS = require('ws') as { new(url: string): WebSocketLike };
+      return new WS(url);
+    },
+  );
+
+  // Pre-fetch markets to seed token IDs for WS subscription
+  const seedMarkets = await fetchMarketsWithPrices().catch(() => []);
+  const allTokenIds = seedMarkets.flatMap(
+    (m: { outcomes: Array<{ tokenId: string }> }) => m.outcomes.map((o: { tokenId: string }) => o.tokenId)
+  );
+  if (allTokenIds.length > 0) {
+    wsClient.trackTokens(allTokenIds);
+    wsClient.connect();
+  }
+
+  wsClient.on('priceMove', ({ tokenId, newPrice }: { tokenId: string; newPrice: number }) => {
+    liveprices.set(tokenId, newPrice);
+  });
+
   // Run once (scan/dry-run) or loop (live)
   if (mode === 'scan' || mode === 'dry-run') {
-    await runCycle(BANKROLL);
+    await runCycle(BANKROLL, liveprices);
+    wsClient.disconnect();
     console.log('\n✅ Cycle complete. Check .canon/execution/ for logs.');
   } else {
     // Live: continuous loop
     while (!isKilled()) {
       try {
-        await runCycle(BANKROLL);
+        await runCycle(BANKROLL, liveprices);
       } catch (err) {
         logger.error('Cycle failed', err);
         dashboard.setPhase('error', `Cycle error: ${err instanceof Error ? err.message : String(err)}`);
       }
       await new Promise(r => setTimeout(r, env.marketPollMs));
     }
+    wsClient.disconnect();
   }
 }
 
