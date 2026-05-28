@@ -1,0 +1,59 @@
+import { config } from 'dotenv';
+import { TradingMode } from './types.js';
+
+config();
+
+function required(key: string): string {
+  const val = process.env[key];
+  if (!val) throw new Error(`Missing required env var: ${key}`);
+  return val;
+}
+
+function optional(key: string, fallback: string): string {
+  return process.env[key] ?? fallback;
+}
+
+function optionalNumber(key: string, fallback: number): number {
+  const val = process.env[key];
+  if (!val) return fallback;
+  const n = Number(val);
+  if (isNaN(n)) throw new Error(`Env var ${key} must be a number, got: ${val}`);
+  return n;
+}
+
+export const env = {
+  // Wallet (only required for live mode)
+  walletPrivateKey: process.env['WALLET_PRIVATE_KEY'],
+  walletAddress: process.env['WALLET_ADDRESS'],
+
+  // Trading mode
+  tradingMode: optional('TRADING_MODE', 'dry-run') as TradingMode,
+
+  // Risk parameters
+  kellyFraction: optionalNumber('KELLY_FRACTION', 0.1),
+  maxBetUsdc: optionalNumber('MAX_BET_USDC', 10),
+  minEvThreshold: optionalNumber('MIN_EV_THRESHOLD', 0.08),
+  minConfidence: optionalNumber('MIN_CONFIDENCE', 0.45),
+  minLiquidityUsd: optionalNumber('MIN_LIQUIDITY_USD', 1000),
+  minVolume24hUsd: optionalNumber('MIN_VOLUME_24H_USD', 50000),
+
+  // Polling intervals
+  injuryPollMs: optionalNumber('INJURY_POLL_MS', 60_000),
+  marketPollMs: optionalNumber('MARKET_POLL_MS', 30_000),
+
+  // API endpoints
+  polymarketClobUrl: optional('POLYMARKET_CLOB_URL', 'https://clob.polymarket.com'),
+  polymarketGammaUrl: optional('POLYMARKET_GAMMA_URL', 'https://gamma-api.polymarket.com'),
+  espnNbaUrl: optional('ESPN_NBA_URL', 'https://site.api.espn.com/apis/site/v2/sports/basketball/nba'),
+
+  // Logging
+  logDir: optional('LOG_DIR', '.canon/execution'),
+
+  // Kill switch
+  killSwitch: process.env['KILL_SWITCH'] === 'true',
+} as const;
+
+export function requireLiveCredentials(): void {
+  if (!env.walletPrivateKey) throw new Error('WALLET_PRIVATE_KEY required for live trading');
+  if (!env.walletAddress) throw new Error('WALLET_ADDRESS required for live trading');
+}
