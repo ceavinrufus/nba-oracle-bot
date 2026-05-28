@@ -35,7 +35,7 @@ const NBA_TEAMS: TeamEntry[] = [
 
 export function resolveTeam(text: string): string | null {
   if (!text) return null;
-  // Normalize: lowercase, strip non-alphanumeric except spaces and hyphens, trim
+  // Normalize: lowercase, strip non-alphanumeric except spaces, trim
   const lower = text.toLowerCase().replace(/[^a-z0-9 -]/g, '').trim();
   // Also a version with hyphens replaced by spaces for matching
   const lowerNoHyphen = lower.replace(/-/g, ' ').replace(/\s+/g, ' ').trim();
@@ -63,4 +63,3 @@ export function resolveTeam(text: string): string | null {
 }
 
 export { NBA_TEAMS };
-export type { TeamEntry };

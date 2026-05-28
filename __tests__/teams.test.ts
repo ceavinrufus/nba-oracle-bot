@@ -38,8 +38,8 @@ describe('resolveTeam', () => {
 
   it('returns null for garbage input', () => {
     expect(resolveTeam('garbage-team-xyz')).toBeNull();
+    expect(resolveTeam('not a real team')).toBeNull();
     expect(resolveTeam('')).toBeNull();
-    expect(resolveTeam('foobar123')).toBeNull();
   });
 
   it('handles mixed case abbreviations', () => {

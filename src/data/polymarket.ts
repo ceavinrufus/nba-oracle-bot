@@ -1,6 +1,7 @@
 import axios from 'axios';
 import { env } from '../env.js';
 import { Market } from '../types.js';
+import { polymarketLimiter } from './limiters.js';
 
 const clob = axios.create({ baseURL: env.polymarketClobUrl });
 const gamma = axios.create({ baseURL: env.polymarketGammaUrl });
@@ -23,6 +24,8 @@ interface GammaMarket {
 }
 
 export async function fetchNbaMarkets(): Promise<Market[]> {
+  try {
+  await polymarketLimiter.throttle();
   const res = await gamma.get<GammaMarket[]>('/markets', {
     params: {
       tag_slug: 'nba',
@@ -31,6 +34,7 @@ export async function fetchNbaMarkets(): Promise<Market[]> {
       limit: 100,
     },
   });
+  polymarketLimiter.recordSuccess();
 
   return res.data
     .filter(m => !m.closed && m.active)
@@ -54,6 +58,10 @@ export async function fetchNbaMarkets(): Promise<Market[]> {
         active: m.active,
       };
     });
+  } catch (err) {
+    polymarketLimiter.recordFailure();
+    throw err;
+  }
 }
 
 // ─── CLOB API: Live Prices ────────────────────────────────────────────────────
@@ -67,10 +75,12 @@ export async function fetchPrices(tokenIds: string[]): Promise<Map<string, numbe
   if (tokenIds.length === 0) return new Map();
 
   try {
+    await polymarketLimiter.throttle();
     const res = await clob.get<ClobPrice[]>('/prices', {
       params: { token_ids: tokenIds.join(',') },
       paramsSerializer: { indexes: null },
     });
+    polymarketLimiter.recordSuccess();
 
     const map = new Map<string, number>();
     for (const p of res.data) {
@@ -78,6 +88,7 @@ export async function fetchPrices(tokenIds: string[]): Promise<Map<string, numbe
     }
     return map;
   } catch {
+    polymarketLimiter.recordFailure();
     // Fallback: prices already populated from Gamma outcomePrices
     return new Map();
   }

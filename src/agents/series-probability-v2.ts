@@ -1,5 +1,6 @@
 import { Market, SeriesState, EVSignal, InjuryReport } from '../types.js';
 import { fetchPlayoffSeries } from '../data/espn.js';
+import { resolveTeam } from '../data/teams.js';
 import { env } from '../env.js';
 
 /**
@@ -135,8 +136,12 @@ export async function scanSeriesEVv2(
 
       for (const outcome of market.outcomes) {
         const outcomeLower = outcome.outcome.toLowerCase();
-        const isHome = outcomeLower.includes(series.homeTeam.teamName.toLowerCase());
-        const isAway = outcomeLower.includes(series.awayTeam.teamName.toLowerCase());
+        const outcomeTeam = resolveTeam(outcome.outcome);
+        const homeTeamId = resolveTeam(series.homeTeam.teamName);
+        const awayTeamId = resolveTeam(series.awayTeam.teamName);
+        const isHome = outcomeTeam !== null && homeTeamId !== null && outcomeTeam === homeTeamId;
+        const isAway = outcomeTeam !== null && awayTeamId !== null && outcomeTeam === awayTeamId;
+        void outcomeLower; // retained for any future use
 
         if (!isHome && !isAway) continue;
         if (outcome.price <= 0 || outcome.price >= 1) continue;
