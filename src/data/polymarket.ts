@@ -124,6 +124,33 @@ export interface OrderBook {
   midpoint: number;
 }
 
+// ─── CLOB API: Market Resolution ─────────────────────────────────────────────
+
+export interface MarketResolution {
+  conditionId: string;
+  resolved: boolean;
+  winnerTokenId: string | null;
+  resolvedAt: number | null;
+}
+
+export async function fetchMarketResolution(conditionId: string): Promise<MarketResolution> {
+  try {
+    await polymarketLimiter.throttle();
+    const res = await clob.get(`/markets/${conditionId}`);
+    polymarketLimiter.recordSuccess();
+    const data = res.data;
+    const resolved = data.closed === true || data.resolved === true;
+    let winnerTokenId: string | null = null;
+    if (resolved && data.tokens) {
+      const winner = data.tokens.find((t: { price: number }) => t.price >= 0.99);
+      winnerTokenId = winner?.token_id ?? null;
+    }
+    return { conditionId, resolved, winnerTokenId, resolvedAt: resolved ? Date.now() : null };
+  } catch {
+    return { conditionId, resolved: false, winnerTokenId: null, resolvedAt: null };
+  }
+}
+
 export async function fetchOrderBook(tokenId: string): Promise<OrderBook> {
   const res = await clob.get<{ bids: Array<{price: string; size: string}>; asks: Array<{price: string; size: string}> }>(
     `/book`, { params: { token_id: tokenId } }

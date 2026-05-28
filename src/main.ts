@@ -14,10 +14,13 @@ import { fetchUsdcBalance } from './data/chain.js';
 import { PolymarketWebSocket, WebSocketLike } from './data/polymarket-ws.js';
 import { kellySize } from './execution/kelly.js';
 import { execute } from './execution/executor.js';
+import { resolveSettledPositions } from './execution/resolver.js';
+import { pollPendingOrders } from './execution/order-manager.js';
 
 import { Signal, TradeDecision } from './types.js';
 import { tracker } from './portfolio/index.js';
 import { resolveTeam } from './data/teams.js';
+import { alerts } from './utils/alerts.js';
 
 const program = new Command();
 program
@@ -90,6 +93,12 @@ function signalToDecision(signal: Signal, bankrollUsdc: number): TradeDecision |
 // ─── Main Loop ────────────────────────────────────────────────────────────────
 
 async function runCycle(bankrollUsdc: number, liveprices: Map<string, number>): Promise<void> {
+  if (getMode() === 'live') {
+    await pollPendingOrders();
+  }
+  if (getMode() === 'live' || getMode() === 'dry-run') {
+    await resolveSettledPositions();
+  }
   dashboard.setPhase('scanning', 'Fetching markets and signals...');
   dashboard.recordScan();
 
@@ -233,7 +242,8 @@ async function main(): Promise<void> {
   }
 }
 
-main().catch(err => {
+main().catch(async err => {
+  await alerts.error('Oracle Error', err instanceof Error ? err.message : String(err));
   console.error('Fatal error:', err);
   process.exit(1);
 });

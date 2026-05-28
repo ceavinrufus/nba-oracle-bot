@@ -5,6 +5,7 @@ import { signOrder } from './signer.js';
 import { checkRisk } from '../risk/index.js';
 import { logger } from '../utils/logger.js';
 import { tracker } from '../portfolio/index.js';
+import { alerts } from '../utils/alerts.js';
 
 const clob = axios.create({ baseURL: env.polymarketClobUrl });
 
@@ -74,6 +75,11 @@ export async function execute(decision: TradeDecision): Promise<TradeResult> {
         size: decision.sizeUsdc,
         enteredAt: Date.now(),
       });
+      await alerts.trade(
+        'Order Filled',
+        `${decision.side} ${decision.sizeUsdc.toFixed(2)} USDC @ ${decision.price.toFixed(3)}`,
+        { token: decision.tokenId.slice(0, 10), reasoning: decision.reasoning.slice(0, 80) }
+      );
     }
     console.log(`[LIVE] Order ${res.data.orderID} — ${res.data.status}`);
     return result;
@@ -81,6 +87,7 @@ export async function execute(decision: TradeDecision): Promise<TradeResult> {
     const error = err instanceof Error ? err.message : String(err);
     const result: TradeResult = { ...base, status: 'rejected', error };
     logger.log(result);
+    await alerts.error('Order Rejected', error.slice(0, 200));
     console.error(`[LIVE] Order rejected: ${error}`);
     return result;
   }

@@ -64,6 +64,11 @@ export const env = {
 
   // Kill switch
   killSwitch: process.env['KILL_SWITCH'] === 'true',
+
+  // Alert destinations (optional)
+  discordWebhookUrl: process.env['DISCORD_WEBHOOK_URL'] || '',
+  telegramBotToken: process.env['TELEGRAM_BOT_TOKEN'] || '',
+  telegramChatId: process.env['TELEGRAM_CHAT_ID'] || '',
 } as const;
 
 export function validateEnv(): void {
