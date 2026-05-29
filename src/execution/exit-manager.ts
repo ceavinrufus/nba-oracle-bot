@@ -3,24 +3,28 @@ import { Position } from '../portfolio/tracker.js';
 import { execute } from './executor.js';
 import { alerts } from '../utils/alerts.js';
 import { Signal, TradeDecision } from '../types.js';
+import { getHotConfig } from '../utils/config-watcher.js';
 
 export interface ExitConfig {
   stopLossPct: number;   // e.g. 0.25 = exit if position down 25%
   takeProfitPct: number; // e.g. 0.50 = exit if position up 50%
 }
 
-const DEFAULT_CONFIG: ExitConfig = {
-  stopLossPct: parseFloat(process.env.STOP_LOSS_PCT ?? '0.25'),
-  takeProfitPct: parseFloat(process.env.TAKE_PROFIT_PCT ?? '0.50'),
-};
+function DEFAULT_CONFIG(): ExitConfig {
+  const hot = getHotConfig();
+  return {
+    stopLossPct: hot.stopLossPct,
+    takeProfitPct: hot.takeProfitPct,
+  };
+}
 
-export function shouldStopLoss(pos: Position, currentPrice: number, config = DEFAULT_CONFIG): boolean {
+export function shouldStopLoss(pos: Position, currentPrice: number, config = DEFAULT_CONFIG()): boolean {
   if (pos.side !== 'BUY') return false;
   const pnlPct = (currentPrice - pos.price) / pos.price;
   return pnlPct <= -config.stopLossPct;
 }
 
-export function shouldTakeProfit(pos: Position, currentPrice: number, config = DEFAULT_CONFIG): boolean {
+export function shouldTakeProfit(pos: Position, currentPrice: number, config = DEFAULT_CONFIG()): boolean {
   if (pos.side !== 'BUY') return false;
   const pnlPct = (currentPrice - pos.price) / pos.price;
   return pnlPct >= config.takeProfitPct;
@@ -28,7 +32,7 @@ export function shouldTakeProfit(pos: Position, currentPrice: number, config = D
 
 export async function checkExits(
   currentPrices: Map<string, number>,
-  config = DEFAULT_CONFIG
+  config = DEFAULT_CONFIG()
 ): Promise<void> {
   const open = tracker.getOpenPositions();
 

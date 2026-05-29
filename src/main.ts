@@ -24,6 +24,7 @@ import { tracker } from './portfolio/index.js';
 import { resolveTeam } from './data/teams.js';
 import { alerts } from './utils/alerts.js';
 import { checkExits } from './execution/exit-manager.js';
+import { startConfigWatcher } from './utils/config-watcher.js';
 
 const program = new Command();
 program
@@ -208,6 +209,7 @@ async function runCycle(bankrollUsdc: number, liveprices: Map<string, number>): 
 
 async function main(): Promise<void> {
   validateEnv();
+  startConfigWatcher();
   const mode = getMode();
   console.log(`\n🏀 NBA Oracle Bot — ${mode.toUpperCase()} MODE`);
   console.log(`Strategy: Injury Scout + Cross-Market Arb + Series EV`);

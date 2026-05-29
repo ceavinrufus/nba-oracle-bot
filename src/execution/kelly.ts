@@ -1,4 +1,5 @@
 import { env } from '../env.js';
+import { getHotConfig } from '../utils/config-watcher.js';
 
 /**
  * Fractional Kelly Criterion position sizing.
@@ -27,7 +28,7 @@ export function kellySize(
 
   if (kelly <= 0) return 0;
 
-  const fractional = kelly * env.kellyFraction;
+  const fractional = kelly * getHotConfig().kellyFraction;
   const raw = fractional * bankrollUsdc;
 
   return Math.min(raw, env.maxBetUsdc);
