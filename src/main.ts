@@ -148,6 +148,20 @@ async function runCycle(bankrollUsdc: number, liveprices: Map<string, number>): 
   dashboard.setSignalStatus('crossmarket_arb', arbSignals.length > 0 ? 'signal_found' : 'idle');
   dashboard.setSignalStatus('series_probability', evSignals.length > 0 ? 'signal_found' : 'idle');
 
+  // Execute ARB signals as dual-leg simultaneously (bypass normal single-leg path)
+  for (const arbSignal of arbSignals) {
+    if (isKilled()) break;
+    if (!wasRecentlyTraded(arbSignal.marketA.tokenId) && !wasRecentlyTraded(arbSignal.marketB.tokenId)) {
+      const arbResult = await executeArb(arbSignal as ArbSignal, bankrollUsdc);
+      if (arbResult) {
+        markTraded(arbSignal.marketA.tokenId);
+        markTraded(arbSignal.marketB.tokenId);
+        dashboard.recordTrade(0);
+        dashboard.addLog(`✅ ARB dual-leg executed: ${arbSignal.description}`);
+      }
+    }
+  }
+
   const allSignals: Signal[] = [...injurySignals, ...arbSignals, ...evSignals];
 
   if (allSignals.length === 0) {
