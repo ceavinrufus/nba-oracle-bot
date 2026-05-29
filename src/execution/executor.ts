@@ -10,7 +10,10 @@ import { alerts } from '../utils/alerts.js';
 const clob = axios.create({ baseURL: env.polymarketClobUrl });
 
 export async function execute(decision: TradeDecision): Promise<TradeResult> {
-  checkRisk(decision);
+  // SELL decisions exit existing positions — skip risk check (reducing exposure, not adding)
+  if (decision.side !== 'SELL') {
+    checkRisk(decision);
+  }
 
   const base: Omit<TradeResult, 'status' | 'orderId' | 'fillPrice' | 'error'> = {
     decision,
@@ -34,14 +37,18 @@ export async function execute(decision: TradeDecision): Promise<TradeResult> {
       orderId: `dry-${Date.now()}`,
     };
     logger.log(result);
-    tracker.addPosition({
-      tokenId: decision.tokenId,
-      team: decision.team,
-      side: decision.side,
-      price: decision.price,
-      size: decision.sizeUsdc,
-      enteredAt: Date.now(),
-    });
+    if (decision.side === 'SELL') {
+      tracker.closePosition(decision.tokenId, decision.price);
+    } else {
+      tracker.addPosition({
+        tokenId: decision.tokenId,
+        team: decision.team,
+        side: decision.side,
+        price: decision.price,
+        size: decision.sizeUsdc,
+        enteredAt: Date.now(),
+      });
+    }
     console.log(`[DRY-RUN] ${decision.side} ${decision.sizeUsdc.toFixed(2)} USDC @ ${decision.price.toFixed(3)} — ${decision.reasoning}`);
     return result;
   }
@@ -67,14 +74,18 @@ export async function execute(decision: TradeDecision): Promise<TradeResult> {
     };
     logger.log(result);
     if (result.status === 'filled') {
-      tracker.addPosition({
-        tokenId: decision.tokenId,
-        team: decision.team,
-        side: decision.side,
-        price: decision.price,
-        size: decision.sizeUsdc,
-        enteredAt: Date.now(),
-      });
+      if (decision.side === 'SELL') {
+        tracker.closePosition(decision.tokenId, decision.price);
+      } else {
+        tracker.addPosition({
+          tokenId: decision.tokenId,
+          team: decision.team,
+          side: decision.side,
+          price: decision.price,
+          size: decision.sizeUsdc,
+          enteredAt: Date.now(),
+        });
+      }
       await alerts.trade(
         'Order Filled',
         `${decision.side} ${decision.sizeUsdc.toFixed(2)} USDC @ ${decision.price.toFixed(3)}`,

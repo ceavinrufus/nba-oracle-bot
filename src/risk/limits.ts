@@ -27,12 +27,12 @@ function extractTeamFromDecision(decision: TradeDecision): string {
     // fall through
   }
   const parts = decision.tokenId.split('-');
-  return parts.length > 1 ? (parts[parts.length - 1] ?? 'unknown').toUpperCase() : 'unknown';
+  return parts.length > 1 ? (parts[parts.length - 1] ?? 'unknown').toLowerCase() : 'unknown';
 }
 
 function extractTeamFromTokenId(tokenId: string): string {
   const parts = tokenId.split('-');
-  return parts.length > 1 ? (parts[parts.length - 1] ?? 'unknown').toUpperCase() : 'unknown';
+  return parts.length > 1 ? (parts[parts.length - 1] ?? 'unknown').toLowerCase() : 'unknown';
 }
 
 /**
@@ -66,7 +66,7 @@ export function checkLimits(
     if (teamExposure + decision.sizeUsdc > maxSingleTeamExposureUsdc) {
       return {
         allowed: false,
-        reason: `Team ${newTeam} exposure would be ${(teamExposure + decision.sizeUsdc).toFixed(2)} USDC, exceeds cap of ${maxSingleTeamExposureUsdc} USDC`,
+        reason: `Team ${newTeam.toUpperCase()} exposure would be ${(teamExposure + decision.sizeUsdc).toFixed(2)} USDC, exceeds cap of ${maxSingleTeamExposureUsdc} USDC`,
       };
     }
   }

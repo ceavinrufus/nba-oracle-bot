@@ -24,7 +24,7 @@ import { tracker } from './portfolio/index.js';
 import { resolveTeam } from './data/teams.js';
 import { alerts } from './utils/alerts.js';
 import { checkExits } from './execution/exit-manager.js';
-import { startConfigWatcher } from './utils/config-watcher.js';
+import { startConfigWatcher, getHotConfig } from './utils/config-watcher.js';
 
 const program = new Command();
 program
@@ -213,7 +213,8 @@ async function main(): Promise<void> {
   const mode = getMode();
   console.log(`\n🏀 NBA Oracle Bot — ${mode.toUpperCase()} MODE`);
   console.log(`Strategy: Injury Scout + Cross-Market Arb + Series EV`);
-  console.log(`Min EV: ${(env.minEvThreshold * 100).toFixed(0)}% | Kelly: ${(env.kellyFraction * 100).toFixed(0)}% | Max bet: $${env.maxBetUsdc}\n`);
+  const cfg = getHotConfig();
+  console.log(`Min EV: ${(cfg.minEvThreshold * 100).toFixed(0)}% | Kelly: ${(cfg.kellyFraction * 100).toFixed(0)}% | Max bet: $${env.maxBetUsdc}\n`);
 
   dashboard.setPhase('scanning', `${mode.toUpperCase()} mode started`);
   logger.info(`NBA Oracle Bot started`, { mode, version: '0.1.0' });

@@ -57,13 +57,19 @@ export async function executeArb(
 
   console.log(`[ARB] Placing dual legs: A=${legA.sizeUsdc.toFixed(2)} USDC @ ${legA.price.toFixed(3)} | B=${legB.sizeUsdc.toFixed(2)} USDC @ ${legB.price.toFixed(3)}`);
 
-  // Place both legs simultaneously
-  const [resultA, resultB] = await Promise.all([
-    execute(legA),
-    execute(legB),
-  ]);
+  // Place legs sequentially: leg A first so risk checks for leg B see updated exposure
+  const resultA = await execute(legA);
+  // Only place leg B if leg A succeeded (avoid orphaned half-arbs)
+  if (resultA.status === 'rejected') {
+    await alerts.warn('ARB Leg A Failed', `Aborting leg B to avoid orphaned position. Error: ${resultA.error ?? 'unknown'}`);
+    const legBAborted: TradeResult = { decision: legB, status: 'rejected', error: 'Aborted: leg A failed', executedAt: Date.now() };
+    return { legA: resultA, legB: legBAborted };
+  }
+  const resultB = await execute(legB);
 
-  const bothFilled = resultA.status !== 'rejected' && resultB.status !== 'rejected';
+  const statusA: string = resultA.status;
+  const statusB: string = resultB.status;
+  const bothFilled = statusA !== 'rejected' && statusB !== 'rejected';
   if (!bothFilled) {
     await alerts.warn(
       'ARB Partial Fill',
