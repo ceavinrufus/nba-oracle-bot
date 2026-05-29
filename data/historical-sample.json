@@ -1,0 +1,7 @@
+[
+  { "tokenId": "tok-001", "question": "Lakers to win Game 1", "team": "Lakers", "side": "home", "marketPrice": 0.45, "modelProb": 0.58, "resolvedPrice": 1.0, "signalDate": "2024-04-20" },
+  { "tokenId": "tok-002", "question": "Celtics to win Game 2", "team": "Celtics", "side": "home", "marketPrice": 0.60, "modelProb": 0.72, "resolvedPrice": 1.0, "signalDate": "2024-04-21" },
+  { "tokenId": "tok-003", "question": "Warriors to win Game 3", "team": "Warriors", "side": "away", "marketPrice": 0.38, "modelProb": 0.50, "resolvedPrice": 0.0, "signalDate": "2024-04-22" },
+  { "tokenId": "tok-004", "question": "Heat to win Game 1", "team": "Heat", "side": "away", "marketPrice": 0.42, "modelProb": 0.30, "resolvedPrice": 0.0, "signalDate": "2024-04-23" },
+  { "tokenId": "tok-005", "question": "Nuggets to win Game 2", "team": "Nuggets", "side": "home", "marketPrice": 0.55, "modelProb": 0.68, "resolvedPrice": 1.0, "signalDate": "2024-04-24" }
+]
