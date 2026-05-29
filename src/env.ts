@@ -65,6 +65,10 @@ export const env = {
   // Kill switch
   killSwitch: process.env['KILL_SWITCH'] === 'true',
 
+  // Odds API
+  oddsApiKey: process.env['ODDS_API_KEY'] ?? '',
+  oddsApiBase: process.env['ODDS_API_BASE'] ?? 'https://api.the-odds-api.com/v4',
+
   // Alert destinations (optional)
   discordWebhookUrl: process.env['DISCORD_WEBHOOK_URL'] || '',
   telegramBotToken: process.env['TELEGRAM_BOT_TOKEN'] || '',

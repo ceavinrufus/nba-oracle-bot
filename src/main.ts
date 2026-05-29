@@ -10,6 +10,7 @@ import { scanCrossMarketArb } from './agents/crossmarket-arb.js';
 import { scanSeriesEVv2 } from './agents/series-probability-v2.js';
 
 import { fetchMarketsWithPrices } from './data/polymarket.js';
+import { fetchNBAOdds } from './data/odds-api.js';
 import { fetchUsdcBalance } from './data/chain.js';
 import { PolymarketWebSocket, WebSocketLike } from './data/polymarket-ws.js';
 import { kellySize } from './execution/kelly.js';
@@ -95,13 +96,17 @@ async function runCycle(bankrollUsdc: number, liveprices: Map<string, number>): 
   dashboard.recordScan();
 
   // Run all three signal engines in parallel
-  const [markets, injurySignals] = await Promise.all([
+  const [markets, injurySignals, oddsGames] = await Promise.all([
     withRetry(() => fetchMarketsWithPrices()).catch(e => {
       logger.error('Failed to fetch markets', e);
       return [];
     }),
     withRetry(() => scanInjuries()).catch(e => {
       logger.error('Injury scout failed', e);
+      return [];
+    }),
+    fetchNBAOdds().catch(e => {
+      logger.error('Odds API fetch failed', e);
       return [];
     }),
   ]);
@@ -139,7 +144,7 @@ async function runCycle(bankrollUsdc: number, liveprices: Map<string, number>): 
       logger.error('Arb scanner failed', e);
       return [];
     }),
-    scanSeriesEVv2(markets, injurySignals.map(s => s.injury)).catch(e => {
+    scanSeriesEVv2(markets, injurySignals.map(s => s.injury), oddsGames).catch(e => {
       logger.error('EV scanner failed', e);
       return [];
     }),

@@ -2,6 +2,7 @@ import { Market, SeriesState, EVSignal, InjuryReport } from '../types.js';
 import { fetchPlayoffSeries } from '../data/espn.js';
 import { resolveTeam } from '../data/teams.js';
 import { env } from '../env.js';
+import { OddsGame, getOddsModelProb } from '../data/odds-api.js';
 
 /**
  * Series Probability Engine V2
@@ -124,6 +125,7 @@ function computeEV(modelProb: number, marketPrice: number): number {
 export async function scanSeriesEVv2(
   markets: Market[],
   injuries: InjuryReport[] = [],
+  oddsGames: OddsGame[] = [],
 ): Promise<EVSignal[]> {
   const seriesList = await fetchPlayoffSeries();
   const signals: EVSignal[] = [];
@@ -146,11 +148,19 @@ export async function scanSeriesEVv2(
         if (!isHome && !isAway) continue;
         if (outcome.price <= 0 || outcome.price >= 1) continue;
 
-        const modelProb = computeSeriesProbabilityV2(
+        const espnProb = computeSeriesProbabilityV2(
           series,
           injuries,
           isHome ? 'home' : 'away',
         );
+
+        // Blend: 50% ESPN, 50% Odds API (when available)
+        const oddsProb = getOddsModelProb(oddsGames, series.homeTeam.teamName, series.awayTeam.teamName);
+        const blendedProb = oddsProb
+          ? (espnProb * 0.5 + (isHome ? oddsProb.home : oddsProb.away) * 0.5)
+          : espnProb;
+
+        const modelProb = blendedProb;
         const ev = computeEV(modelProb, outcome.price);
         const confidence = Math.min(0.9, Math.abs(modelProb - outcome.price) * 5);
 
