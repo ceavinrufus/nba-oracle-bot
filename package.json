@@ -12,7 +12,8 @@
     "scan": "tsx src/main.ts --mode=scan",
     "dry-run": "tsx src/main.ts --mode=dry-run",
     "live": "tsx src/main.ts --mode=live",
-    "start": "tsx src/main.ts"
+    "start": "tsx src/main.ts",
+    "admin": "tsx src/cli/admin.ts"
   },
   "dependencies": {
     "ethers": "^6.13.0",

@@ -74,9 +74,15 @@ function makeResult(overrides: Partial<Parameters<typeof trackOrder>[0]> = {}): 
   } as Parameters<typeof trackOrder>[0];
 }
 
+const ORDERS_PATH = resolve(process.cwd(), '.canon/pending-orders.json');
+
 describe('order-manager', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    // Clear the order store between tests to prevent accumulation
+    if (existsSync(ORDERS_PATH)) {
+      rmSync(ORDERS_PATH);
+    }
   });
 
   it('trackOrder adds a pending order to the store', async () => {

@@ -17,10 +17,12 @@ import { execute } from './execution/executor.js';
 import { resolveSettledPositions } from './execution/resolver.js';
 import { pollPendingOrders } from './execution/order-manager.js';
 
-import { Signal, TradeDecision } from './types.js';
+import { Signal, TradeDecision, ArbSignal } from './types.js';
+import { executeArb } from './execution/arb-executor.js';
 import { tracker } from './portfolio/index.js';
 import { resolveTeam } from './data/teams.js';
 import { alerts } from './utils/alerts.js';
+import { checkExits } from './execution/exit-manager.js';
 
 const program = new Command();
 program
@@ -59,18 +61,8 @@ function signalToDecision(signal: Signal, bankrollUsdc: number): TradeDecision |
   }
 
   if (signal.type === 'ARB') {
-    // marketA.price is the current market price; actualProb is the model's fair value
-    const size = kellySize(signal.actualProb, signal.marketA.price, bankrollUsdc);
-    if (size < 0.5) return null;
-    return {
-      signal,
-      tokenId: signal.marketA.tokenId,
-      team: resolveTeam(signal.marketA.outcome) ?? undefined,
-      side: 'BUY',
-      price: signal.marketA.price,
-      sizeUsdc: size,
-      reasoning: signal.description,
-    };
+    // ARB signals are handled by executeArb (dual-leg), skip single-leg path
+    return null;
   }
 
   if (signal.type === 'EV') {
@@ -122,6 +114,17 @@ async function runCycle(bankrollUsdc: number, liveprices: Map<string, number>): 
       const lp = liveprices.get(outcome.tokenId);
       if (lp !== undefined) outcome.price = lp;
     }
+  }
+
+  // After live price overlay, check exit conditions
+  const currentPrices = new Map<string, number>();
+  for (const m of markets) {
+    for (const o of (m as { outcomes: Array<{ tokenId: string; price: number }> }).outcomes) {
+      currentPrices.set(o.tokenId, o.price);
+    }
+  }
+  if (getMode() !== 'scan') {
+    await checkExits(currentPrices);
   }
 
   if (injurySignals.length > 0) {
