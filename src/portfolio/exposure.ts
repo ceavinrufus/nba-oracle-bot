@@ -1,4 +1,4 @@
-import { Position, getOpenPositions, PositionStore } from './tracker.js';
+import { getOpenPositions, PositionStore } from './tracker.js';
 
 export interface ExposureByTeam {
   team: string;

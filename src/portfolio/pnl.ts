@@ -1,4 +1,4 @@
-import { Position, getOpenPositions, getClosedPositions, PositionStore } from './tracker.js';
+import { getOpenPositions, getClosedPositions, PositionStore } from './tracker.js';
 
 export interface PnlSummary {
   realizedPnl: number;
