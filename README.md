@@ -15,8 +15,8 @@ Three parallel intelligence engines, one Canon-orchestrated decision layer:
 ## Quick Start
 
 ```bash
-# Prerequisites: Node.js 22+, pnpm 10+, Canon CLI
-pipx install canon-tui    # install Canon
+# Prerequisites: Node.js 20+, pnpm 10+
+# Canon TUI (optional): https://github.com/DEGAorg/canon-tui
 pnpm install              # install deps
 cp .env.example .env      # configure (no wallet needed for dry-run)
 
@@ -75,5 +75,5 @@ This bot is built Canon-native:
 
 ## Tech Stack
 
-TypeScript 5 · Node.js 22 · pnpm · Vitest · oxlint · ethers.js v6
+TypeScript 5 · Node.js 20+ · pnpm · Vitest · oxlint · ethers.js v6
 Polymarket CLOB + Gamma APIs · ESPN NBA API · Polygon mainnet
