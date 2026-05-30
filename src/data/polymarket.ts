@@ -125,8 +125,7 @@ export async function fetchPrices(tokenIds: string[]): Promise<Map<string, numbe
     }
     return map;
   } catch {
-    polymarketLimiter.recordFailure();
-    // Fallback: prices already populated from Gamma outcomePrices
+    // Don't trip the circuit breaker — CLOB prices are optional, Gamma outcomePrices are the fallback
     return new Map();
   }
 }

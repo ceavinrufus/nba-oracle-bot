@@ -86,7 +86,7 @@ export async function fetchPlayoffSeries(): Promise<SeriesState[]> {
     const series: SeriesState[] = [];
 
     const events = res.data?.events ?? [];
-    const entries: Array<{ event: typeof events[0]; home: { team: { id: string; displayName: string }; record?: { items?: Array<{ type: string; summary?: string }> }; linescores?: unknown[] }; away: { team: { id: string; displayName: string }; record?: { items?: Array<{ type: string; summary?: string }> }; linescores?: unknown[] } }> = [];
+    const entries: Array<{ event: typeof events[0]; comp: { series?: { competitors?: Array<{ id: string; wins: number }> } }; home: { team: { id: string; displayName: string }; linescores?: unknown[] }; away: { team: { id: string; displayName: string }; linescores?: unknown[] } }> = [];
 
     for (const event of events) {
       const comp = event.competitions?.[0];
@@ -96,7 +96,7 @@ export async function fetchPlayoffSeries(): Promise<SeriesState[]> {
       const away = comp.competitors?.find((c: { homeAway: string }) => c.homeAway === 'away');
       if (!home || !away) continue;
 
-      entries.push({ event, home, away });
+      entries.push({ event, comp, home, away });
     }
 
     // Fetch all team stats in parallel
@@ -105,12 +105,14 @@ export async function fetchPlayoffSeries(): Promise<SeriesState[]> {
     );
 
     for (let i = 0; i < entries.length; i++) {
-      const { event, home, away } = entries[i]!;
+      const { event, comp, home, away } = entries[i]!;
       const homeStats = teamStatsResults[i * 2];
       const awayStats = teamStatsResults[i * 2 + 1];
 
-      const homeSeries = home.record?.items?.find((r: { type: string }) => r.type === 'playoff') ?? home.record?.items?.find((r: { type: string }) => r.type === 'vsconf');
-      const awaySeries = away.record?.items?.find((r: { type: string }) => r.type === 'playoff') ?? away.record?.items?.find((r: { type: string }) => r.type === 'vsconf');
+      // Use comp.series.competitors for actual playoff series wins (not season records)
+      const seriesCompetitors = comp.series?.competitors ?? [];
+      const homeSeriesEntry = seriesCompetitors.find((c: { id: string; wins: number }) => c.id === home.team.id);
+      const awaySeriesEntry = seriesCompetitors.find((c: { id: string; wins: number }) => c.id === away.team.id);
 
       series.push({
         seriesId: event.id,
@@ -130,8 +132,8 @@ export async function fetchPlayoffSeries(): Promise<SeriesState[]> {
           homeRecord: { wins: 0, losses: 0 },
           awayRecord: { wins: 0, losses: 0 },
         },
-        homeWins: homeSeries?.summary ? parseInt(homeSeries.summary.split('-')[0] ?? '0') : 0,
-        awayWins: awaySeries?.summary ? parseInt(awaySeries.summary.split('-')[0] ?? '0') : 0,
+        homeWins: homeSeriesEntry?.wins ?? 0,
+        awayWins: awaySeriesEntry?.wins ?? 0,
         currentGame: (home.linescores?.length ?? 0) + 1,
         homeCourtTeam: home.team.id,
       });
