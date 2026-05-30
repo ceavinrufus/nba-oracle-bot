@@ -137,13 +137,25 @@ export async function scanSeriesEVv2(
       if (market.volume24h < env.minVolume24hUsd) continue;
 
       for (const outcome of market.outcomes) {
-        const outcomeLower = outcome.outcome.toLowerCase();
-        const outcomeTeam = resolveTeam(outcome.outcome);
+        // For "Will [TEAM] win..." markets, outcomes are Yes/No — resolve team from question
+        const outcomeLabel = outcome.outcome.toLowerCase();
+        const isYes = outcomeLabel === 'yes';
+        const isNo = outcomeLabel === 'no';
+
+        let outcomeTeam = resolveTeam(outcome.outcome);
+
+        // Fallback: if Yes/No market, extract team from question
+        if (outcomeTeam === null && (isYes || isNo)) {
+          outcomeTeam = resolveTeam(market.question);
+        }
+
         const homeTeamId = resolveTeam(series.homeTeam.teamName);
         const awayTeamId = resolveTeam(series.awayTeam.teamName);
         const isHome = outcomeTeam !== null && homeTeamId !== null && outcomeTeam === homeTeamId;
         const isAway = outcomeTeam !== null && awayTeamId !== null && outcomeTeam === awayTeamId;
-        void outcomeLower; // retained for any future use
+
+        // For Yes/No markets, only consider the YES outcome (win probability)
+        if (isYes === false && (isHome || isAway) && outcomeLabel === 'no') continue;
 
         if (!isHome && !isAway) continue;
         if (outcome.price <= 0 || outcome.price >= 1) continue;
